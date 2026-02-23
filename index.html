@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNT PH VII - TRACKING SYSTEM</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: #2c3e50 url('Background.jpeg') no-repeat center center fixed; background-size: cover; color: white; min-height: 100vh; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: -1; }
+        .login-box { background: white; padding: 35px; border-radius: 15px; width: 320px; text-align: center; color: #333; margin: 10% auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        input, textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        .menu-bar { background: rgba(44, 62, 80, 0.95); padding: 15px; border-bottom: 3px solid #27ae60; text-align: center; position: sticky; top: 0; z-index: 100; }
+        #live-clock { color: #2ecc71; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; }
+        .controls { display: flex; justify-content: center; gap: 12px; margin: 20px; flex-wrap: wrap; }
+        .block-btn { padding: 12px 24px; cursor: pointer; background: #3498db; border: none; border-radius: 8px; color: white; font-weight: bold; transition: 0.3s; }
+        .block-btn.active { background: #16a085; transform: scale(1.1); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        #flat-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; }
+        .flat-card { background: white; padding: 18px; border-radius: 12px; color: #333; border-left: 8px solid #bdc3c7; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; }
+        .flat-card:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 5; }
+        .block-1 { border-left-color: #e74c3c; } .block-2 { border-left-color: #f1c40f; } .block-3 { border-left-color: #9b59b6; }
+        .flat-card.filled.block-1 { background: #fff5f5; }
+        .flat-card.filled.block-2 { background: #fffdf2; }
+        .flat-card.filled.block-3 { background: #faf5ff; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 95%; max-width: 600px; color: #333; max-height: 90vh; overflow-y: auto; }
+        .loading { display: none; position: fixed; top: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: black; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="loading" class="loading">📡 Syncing with Cloud...</div>
+
+<div id="auth-screen">
+    <div class="login-box" id="login-form">
+        <h2 style="margin-top:0;">🏢 MNT PHASE-VII 🏢 LOGIN</h2>
+        <input type="text" id="login-input" placeholder="Enter Mobile Number">
+        <button onclick="handleLogin()" style="width:100%; padding:14px; background:#27ae60; color:white; border:none; cursor:pointer; font-weight:bold; border-radius:8px;">LOGIN</button>
+        <p style="font-size: 0.9em; margin-top: 20px;">New Visitor? <a href="#" onclick="showAuth('reg')" style="color:#3498db; text-decoration:none;">Register Here</a></p>
+    </div>
+
+    <div class="login-box" id="reg-form" style="display:none;">
+        <h2 style="margin-top:0;">👤 REGISTRATION</h2>
+        <input type="text" id="reg-name" placeholder="Enter Your Name">
+        <input type="number" id="reg-mobile" placeholder="Enter Mobile Number">
+        <button onclick="handleRegister()" style="width:100%; padding:14px; background:#3498db; color:white; border:none; cursor:pointer; font-weight:bold; border-radius:8px;">REGISTER & LOGIN</button>
+        <p style="font-size: 0.9em; margin-top: 20px;"><a href="#" onclick="showAuth('login')" style="color:#777; text-decoration:none;">Already Registered? Login</a></p>
+    </div>
+</div>
+
+<div id="app-content" style="display:none;">
+    <div class="menu-bar">
+        <div id="live-clock"></div>
+        <div style="font-weight:bold; font-size: 1.2em;">🏢TNUHDB DIV-I MNT PH-VII SCHEME🏢</div>
+        <div style="margin-top:10px; font-size: 0.8em; color:#bdc3c7;">Logged as: <span id="userBadge" style="color:#2ecc71;"></span> | <span onclick="logout()" style="color:#e74c3c; cursor:pointer; font-weight:bold;">Logout</span></div>
+    </div>
+
+    <div class="search-container" style="padding: 20px; display: flex; justify-content: center;">
+        <input type="text" id="searchInput" onkeyup="filterFlats()" placeholder="🔍 Search Name, Flat No, or Mobile..." style="max-width:500px; border-radius:25px; border:2px solid #27ae60; padding:12px 25px; outline:none;">
+    </div>
+
+    <div class="controls">
+        <button class="block-btn" onclick="loadBlock('ALL')" id="btnALL">ALL</button>
+        <button class="block-btn" onclick="loadBlock(1)" id="btn1">Block 1</button>
+        <button class="block-btn" onclick="loadBlock(2)" id="btn2">Block 2</button>
+        <button class="block-btn" onclick="loadBlock(3)" id="btn3">Block 3</button>
+    </div>
+
+    <div id="flat-container"></div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalTitle">Edit Resident Details</h3>
+        <input type="hidden" id="curId">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div style="grid-column: span 2;"><label>Resident Name</label><input type="text" id="bName"></div>
+            <div style="grid-column: span 2;"><label>F/H Name</label><input type="text" id="fhName"></div>
+            <div><label>Mobile Number</label><input type="number" id="mobile"></div>
+            <div><label>Aadhar Number</label><input type="number" id="aadhar"></div>
+            <div><label>Voter ID</label><input type="text" id="voter"></div>
+            <div><label>Smart Card</label><input type="text" id="smart"></div>
+            <div style="grid-column: span 2;"><label>Remarks/Notes</label><textarea id="rem" rows="3"></textarea></div>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:20px;">
+            <button onclick="closeM()" style="flex:1; padding:14px; border-radius:8px; border:1px solid #ccc; cursor:pointer; font-weight:bold;">Cancel</button>
+            <button onclick="saveD()" style="flex:1; padding:14px; background:#27ae60; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">SAVE CHANGES</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbz2aNdg6IwYCgSXbOPn_sknFrRZs5KBjHK-KoQZfwQhbgXkHhJuGP29RCgO8ujq2-cB/exec';
+    let appData = {};
+    let currentUser = { role: 'viewer', name: '' };
+
+    function showAuth(type) {
+        document.getElementById('login-form').style.display = type === 'login' ? 'block' : 'none';
+        document.getElementById('reg-form').style.display = type === 'reg' ? 'block' : 'none';
+    }
+
+    function handleLogin() {
+        const input = document.getElementById('login-input').value;
+        if(input === "Yokesh") loginUser('admin', 'Yokesh'); // Hidden Admin Login
+        else if(input === "Kumar") loginUser('admin', 'Kumar'); // 2nd Admin
+        else if(input.length >= 10) {
+            loginUser('viewer', 'Guest');
+            trackLogin(input);
+        } else { alert("Invalid Mobile Number!"); }
+    }
+
+    async function handleRegister() {
+        const name = document.getElementById('reg-name').value;
+        const mobile = document.getElementById('reg-mobile').value;
+        if(!name || !mobile) { alert("Please enter details"); return; }
+        document.getElementById("loading").style.display="flex";
+        const form = new URLSearchParams();
+        form.append("action", "register");
+        form.append("name", name);
+        form.append("mobile", mobile);
+        await fetch(scriptURL, { method: 'POST', body: form, mode: 'no-cors' });
+        loginUser('viewer', name);
+    }
+
+    function trackLogin(mobile) {
+        const form = new URLSearchParams();
+        form.append("action", "trackLogin");
+        form.append("mobile", mobile);
+        fetch(scriptURL, { method: 'POST', body: form, mode: 'no-cors' });
+    }
+
+    function loginUser(role, name) {
+        currentUser = { role: role, name: name };
+        sessionStorage.setItem("user", JSON.stringify(currentUser));
+        showApp();
+    }
+
+    function showApp() {
+        const saved = sessionStorage.getItem("user");
+        if(!saved) return;
+        currentUser = JSON.parse(saved);
+        document.getElementById("auth-screen").style.display = "none";
+        document.getElementById("app-content").style.display = "block";
+        document.getElementById("userBadge").innerText = currentUser.name;
+        fetchD();
+    }
+
+    function logout() { sessionStorage.clear(); location.reload(); }
+
+    async function fetchD() {
+        document.getElementById("loading").style.display="flex";
+        try {
+            const r = await fetch(scriptURL + "?v=" + new Date().getTime());
+            const d = await r.json();
+            appData = {};
+            d.forEach(row => { if(row.flatId) appData[row.flatId] = row; });
+            loadBlock('ALL');
+        } catch(e) {}
+        document.getElementById("loading").style.display="none";
+    }
+
+    function loadBlock(b) {
+        const con = document.getElementById("flat-container"); con.innerHTML = "";
+        let start = 1, end = 200;
+        if(b===1) end=40; else if(b===2) {start=41; end=120;} else if(b===3) {start=121; end=200;}
+        for(let i=start; i<=end; i++) {
+            const id = "flat_"+i; const d = appData[id] || {};
+            let bClass = (i<=40) ? "block-1" : (i<=120) ? "block-2" : "block-3";
+            const card = document.createElement("div");
+            card.className = `flat-card ${bClass} ${d.name ? 'filled' : ''}`;
+            let btn = (currentUser.role === 'admin') ? 
+                `<button onclick="openM('${id}',${i})" style="width:100%; margin-top:15px; background:#3498db; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">Edit Details</button>` : '';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <b style="font-size:1.1em; color:#2c3e50;">Flat ${i}</b>
+                    <span style="font-size:1em;">${d.name ? '✅' : '⚪'}</span>
+                </div>
+                <div style="font-size:0.85em; margin-top:10px; color: #555; line-height:1.5;">
+                    <div><b>Name:</b> ${d.name || '-'}</div>
+                    <div><b>F/H:</b> ${d.fhName || '-'}</div>
+                    <div><b>Mob:</b> ${d.mobile || '-'}</div>
+                </div>
+                ${btn}
+            `;
+            con.appendChild(card);
+        }
+    }
+
+    function openM(id, n) {
+        document.getElementById("editModal").style.display="flex";
+        document.getElementById("curId").value = id;
+        document.getElementById("modalTitle").innerText = "Flat Number: " + n;
+        const d = appData[id] || {};
+        document.getElementById("bName").value = d.name || "";
+        document.getElementById("fhName").value = d.fhName || "";
+        document.getElementById("mobile").value = d.mobile || "";
+        document.getElementById("aadhar").value = d.aadhar || "";
+        document.getElementById("voter").value = d.voter || "";
+        document.getElementById("smart").value = d.smart || "";
+        document.getElementById("rem").value = d.remarks || "";
+    }
+
+    async function saveD() {
+        const id = document.getElementById("curId").value;
+        const d = { 
+            flatId: id, name: document.getElementById("bName").value, fhName: document.getElementById("fhName").value, 
+            mobile: document.getElementById("mobile").value, aadhar: document.getElementById("aadhar").value,
+            voter: document.getElementById("voter").value, smart: document.getElementById("smart").value,
+            remarks: document.getElementById("rem").value,
+            editorName: currentUser.name 
+        };
+        document.getElementById("loading").style.display="flex";
+        const form = new URLSearchParams();
+        for(let k in d) form.append(k, d[k]);
+        await fetch(scriptURL, { method: 'POST', body: form, mode: 'no-cors' });
+        closeM(); fetchD();
+    }
+
+    function closeM() { document.getElementById("editModal").style.display="none"; }
+    function filterFlats() {
+        let val = document.getElementById("searchInput").value.toLowerCase();
+        let cards = document.getElementsByClassName("flat-card");
+        Array.from(cards).forEach(card => card.style.display = card.innerText.toLowerCase().includes(val) ? "" : "none");
+    }
+    function updateClock() {
+        const now = new Date();
+        const clock = document.getElementById('live-clock');
+        if(clock) clock.innerText = now.toLocaleString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    }
+    window.onload = () => { if(sessionStorage.getItem("user")) showApp(); setInterval(updateClock, 1000); };
+</script>
+</body>
+</html>
